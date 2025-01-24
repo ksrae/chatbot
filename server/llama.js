@@ -95,7 +95,7 @@ server.on('request', (req, res) => {
 
         // Stream response from Ollama
         const response = await ollama.chat({
-          model: 'llama3.2-vision:latest',
+          model: config.ai.llama.model,
           messages: userChatHistory,
           stream: true
         });

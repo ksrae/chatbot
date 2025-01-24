@@ -95,7 +95,7 @@ server.on('request', (req, res) => {
 
         // Stream response from Ollama
         const response = await ollama.chat({
-          model: 'deepseek-r1:32b',
+          model: config.ai.deepseek.model,
           messages: userChatHistory,
           stream: true
         });

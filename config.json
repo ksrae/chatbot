@@ -8,15 +8,17 @@
       "model": "gemini-1.5-flash",
       "proModel": "gemini-1.5-pro",
       "smallModel": "gemini-1.5-flash-8b",
-      "key": "",
+      "key": "AIzaSyDCs7S1OMPrWpSSYWv1rIobreFLgWKF4Zw",
       "userRole": "user",
       "assistRole": "model"
     },
     "llama": {
+      "model": "llama3.2-vision:latest",
       "userRole": "user",
       "assistRole": "assistant"
     },
     "deepseek": {
+      "model": "deepseek-r1:32b",
       "userRole": "user",
       "assistRole": "assistant"
     }
