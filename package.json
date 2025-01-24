@@ -1,0 +1,20 @@
+{
+  "main": "server.js",
+  "scripts": {
+    "start": "npm run gemini",
+    "gemini": "node server/gemini.js",
+    "gpt": "node server/gpt.js",
+    "llama": "node server/llama.js",
+    "deepseek": "node server/deepseek.js"
+  },
+  "name": "gemini-ai",
+  "type": "module",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "highlight.js": "^11.11.1",
+    "multer": "^1.4.5-lts.1",
+    "ollama": "^0.5.12"
+  }
+}

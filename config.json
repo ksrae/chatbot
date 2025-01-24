@@ -1,0 +1,24 @@
+{
+  "files": {
+    "crt": "localhost.crt",
+    "key": "localhost.key"
+  },
+  "ai": {
+    "gemini": {
+      "model": "gemini-1.5-flash",
+      "proModel": "gemini-1.5-pro",
+      "smallModel": "gemini-1.5-flash-8b",
+      "key": "",
+      "userRole": "user",
+      "assistRole": "model"
+    },
+    "llama": {
+      "userRole": "user",
+      "assistRole": "assistant"
+    },
+    "deepseek": {
+      "userRole": "user",
+      "assistRole": "assistant"
+    }
+  }
+}

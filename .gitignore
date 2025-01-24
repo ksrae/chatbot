@@ -1,0 +1,7 @@
+localhost.crt
+localhost.key
+
+package-lock.json
+node_modules/
+dist/
+uploads/
