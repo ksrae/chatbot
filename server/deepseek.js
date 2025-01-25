@@ -27,11 +27,11 @@ const getConfig = () => {
 
 const config = getConfig();
 
-const PORT = 3001;
+const PORT = config.port;
 
 // Serve index.html for root route
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public', 'deepseek.html'));
+  res.sendFile(path.join(__dirname, '../public', config.ai.deepseek.template));
 });
 
 // HTTP/2 서버 옵션
@@ -49,11 +49,8 @@ server.listen(PORT, () => {
 // 사용자별 대화 히스토리를 저장
 const userChatHistory = [
   { 
-    role: "system", 
-    content: `
-    You're a professional and friendly assistant. Always speak in a polite and respectful tone. 
-    If you're responding specially in Korean, be sure to consistently use honorifics like '입니다', '입니까', '계십니다', '하십시오' and maintain a respectful language. Provide helpful information using professional, clear language
-    `
+    role: config.ai.deepseek.systemRole, 
+    content: config.prompt
   }
 ];
 
@@ -109,8 +106,6 @@ server.on('request', (req, res) => {
             done: part.done 
           });
           
-          console.log({returnValue});
-
           if (part.message.content) {
             fullResponse += part.message.content;
           }
@@ -138,11 +133,11 @@ server.on('request', (req, res) => {
       }
     });
   } else if (req.method === 'GET' && req.url === '/') {
-    const indexPath = path.join(__dirname, '../public', 'deepseek.html');
+    const indexPath = path.join(__dirname, '../public', config.ai.deepseek.template);
     fs.readFile(indexPath, (err, content) => {
       if (err) {
         res.writeHead(500);
-        res.end('Error loading deepseek.html');
+        res.end('Error loading template');
       } else {
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end(content);

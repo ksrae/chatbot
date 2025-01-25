@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Llama Chatbot</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    h1 {
+      color: #4A90E2;
+    }
+    #chatContainer {
+      width: 100%;
+      max-width: 600px;
+      background: #fff;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #inputContainer {
+      display: flex;
+      align-items: center;
+      border-top: 1px solid #ddd;
+      padding: 10px;
+    }
+    textarea {
+      flex: 1;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      resize: none;
+      font-size: 14px;
+      margin-left: 10px;
+    }
+    textarea:focus {
+      outline: none;
+      box-shadow: 0 0 3px rgba(0, 123, 255, 0.5);
+    }
+    #fileUploadIcon {
+      cursor: pointer;
+      font-size: 18px;
+      color: #4A90E2;
+    }
+    button {
+      background: #4A90E2;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    button:hover {
+      background: #357ABD;
+    }
+    #chatOutput {
+      padding: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-size: 14px;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    .message {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #f1f1f1;
+    }
+    .message.user {
+      background: #e0f7fa;
+    }
+    .message.bot {
+      background: #f0e68c;
+    }
+    .image-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .image-container img {
+      max-width: 100px;
+      max-height: 100px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <h1>GPT Chatbot</h1>
+  <div id="chatContainer">
+    <div id="imagePreviewContainer"></div>
+    <div id="chatOutput"></div>
+    <div id="inputContainer">
+      <label id="fileUploadIcon" for="fileInput">📎</label>
+      <input type="file" id="fileInput" multiple>
+      <textarea id="message" rows="2" placeholder="Type your message..."></textarea>
+      <button id="sendMessage">Send</button>
+      <button id="stopMessage" style="display: none;">Stop</button>
+    </div>
+  </div>
+  
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const messageInput = document.getElementById('message');
+    const chatOutput = document.getElementById('chatOutput');
+    const sendMessageButton = document.getElementById('sendMessage');
+    const stopMessageButton = document.getElementById('stopMessage');
+  
+    let abortController;
+  
+    // 파일 업로드 시 미리보기
+    fileInput.addEventListener('change', () => {
+      const files = fileInput.files;
+  
+      if (files && files.length > 0) {
+        // 대화창에 이미지 미리보기 블록 생성
+        const previewBlock = document.createElement('div');
+        previewBlock.classList.add('message-block');
+  
+        const imageContainer = document.createElement('div');
+        imageContainer.classList.add('image-container');
+  
+        Array.from(files).forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const imgElement = document.createElement('img');
+            imgElement.src = e.target.result;
+            imgElement.alt = file.name;
+            imgElement.style.maxWidth = '100px';
+            imgElement.style.maxHeight = '100px';
+            imgElement.style.margin = '5px';
+            imgElement.style.border = '1px solid #ddd';
+            imgElement.style.borderRadius = '8px';
+            imageContainer.appendChild(imgElement);
+          };
+          reader.readAsDataURL(file);
+        });
+  
+        // 대화창에 추가
+        previewBlock.appendChild(imageContainer);
+        chatOutput.appendChild(previewBlock);
+        chatOutput.scrollTop = chatOutput.scrollHeight; // 스크롤 맨 아래로
+      }
+    });
+  
+    // 메시지 전송 버튼 클릭 시
+    sendMessageButton.addEventListener('click', () => {
+      sendMessage();
+    });
+  
+    // 메시지 전송 함수
+    async function sendMessage() {
+      const message = messageInput.value;
+      const files = fileInput.files;
+  
+      if (!message && (!files || files.length === 0)) {
+        alert('Please provide a message or image.');
+        return;
+      }
+  
+      // 입력값 초기화
+      messageInput.value = '';
+      
+  
+      const formData = new FormData();
+      if (message) formData.append('message', message);
+      if (files) {
+        Array.from(files).forEach((file) => formData.append('images', file));
+      }
+  
+      sendMessageButton.style.display = 'none';
+      stopMessageButton.style.display = 'inline-block';
+  
+      abortController = new AbortController();
+      const signal = abortController.signal;
+  
+      // 사용자 메시지 DOM 추가
+      const userMessageBlock = document.createElement('div');
+      userMessageBlock.classList.add('message-block');
+      chatOutput.appendChild(userMessageBlock);
+  
+      if (message) {
+        const userMessage = document.createElement('div');
+        userMessage.classList.add('message', 'user');
+        userMessage.textContent = message;
+        userMessageBlock.appendChild(userMessage);
+      }
+  
+      // 봇 메시지 준비
+      const botMessage = document.createElement('div');
+      botMessage.classList.add('message', 'bot');
+      botMessage.textContent = '';
+      userMessageBlock.appendChild(botMessage);
+  
+      // 서버 요청 처리
+      try {
+        const response = await fetch('/process', {
+          method: 'POST',
+          body: formData,
+          signal,
+        });
+  
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let done = false;
+        let accumulatedText = '';
+  
+        while (!done) {
+          const { value, done: streamDone } = await reader.read();
+          const text = decoder.decode(value, { stream: true });
+
+          if (text) {
+            const parsingText = JSON.parse(text);
+            accumulatedText += parsingText.content; // 받은 텍스트를 계속 누적
+            botMessage.textContent = accumulatedText; // 누적된 텍스트를 표시
+            chatOutput.scrollTop = chatOutput.scrollHeight; // 스크롤을 맨 아래로
+
+            done = parsingText.done;
+            
+          } 
+
+          // done = streamDone;
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('Request aborted.');
+        } else {
+          console.error('Error:', error);
+        }
+      } finally {
+        sendMessageButton.style.display = 'inline-block';
+        stopMessageButton.style.display = 'none';
+        fileInput.value = '';
+      }
+    }
+
+        // 엔터 키로 메시지 전송
+    messageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  </script>
+  
+  
+</body>
+</html>

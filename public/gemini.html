@@ -10,7 +10,7 @@
       max-width: 600px; 
       margin: 0 auto; 
       padding: 20px; 
-      height: 100vh; /* 전체 높이를 100vh로 설정 */
+      height: 100vh;
       display: flex; 
       flex-direction: column; 
     }
@@ -19,11 +19,11 @@
       border: 1px solid #ccc; 
       padding: 10px; 
       margin-top: 10px; 
-      flex-grow: 1; /* 남은 공간을 차지하도록 설정 */
-      overflow-y: auto; /* 세로 스크롤 가능 */
+      flex-grow: 1; 
+      overflow-y: auto;
     }
 
-    textarea { 
+    textarea, input[type="file"] { 
       width: 100%; 
       margin-top: 10px; 
     }
@@ -44,91 +44,130 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
-</head>
 <body>
   <h1>Gemini-1.5 Chatbot</h1>
   <div id="output"></div>
 
   <textarea id="question" placeholder="Ask your question here..." rows="4"></textarea>
+  <input type="file" id="image" accept="image/*" />
   <button onclick="askQuestion()">Submit</button>
-  
-  
 
   <script>
-    const outputDiv = document.getElementById("output");
-    let currentResponse = "";
+const outputDiv = document.getElementById("output");
+const imageInput = document.getElementById("image");
+let currentResponse = "";
 
-    // Set marked.js options
-    marked.setOptions({
-      renderer: new marked.Renderer(),
-      highlight: function(code, language) {
-          let validLanguage = hljs.getLanguage(language) ? language : 'plaintext';
-          return hljs.highlight(validLanguage, code).value;
-      },
-      pedantic: false,
-      gfm: true,
-      breaks: false,
-      sanitize: false,
-      smartLists: true,
-      smartypants: false,
-      xhtml: false
-    });
+// Set marked.js options
+marked.setOptions({
+  renderer: new marked.Renderer(),
+  highlight: function(code, language) {
+      let validLanguage = hljs.getLanguage(language) ? language : 'plaintext';
+      return hljs.highlight(validLanguage, code).value;
+  },
+  pedantic: false,
+  gfm: true,
+  breaks: false,
+  sanitize: false,
+  smartLists: true,
+  smartypants: false,
+  xhtml: false
+});
 
+// Add event listener to image input for immediate preview
+imageInput.addEventListener('change', function(event) {
+  if (this.files.length > 0) {
+    const imageFile = this.files[0];
+    const imageElement = document.createElement('img');
+    imageElement.classList.add('uploaded-image');
+    imageElement.style.maxWidth = '200px';  // Fixed small width
+    imageElement.style.height = 'auto';
+    imageElement.style.display = 'block';
+    imageElement.style.margin = '10px 0';
 
-    async function askQuestion() {
-      const question = document.getElementById("question").value;
-      if (!question.trim()) return;
-
-      outputDiv.innerHTML += `<p class="user-message"><strong>You:</strong> ${question}</p>`;
-      document.getElementById("question").value = '';
-
-      try {
-        const botMessageElement = document.createElement('p');
-        botMessageElement.className = 'bot-message';
-        botMessageElement.innerHTML = `<strong>Bot:</strong> <span class="bot-response"></span>`;
-        outputDiv.appendChild(botMessageElement);
-
-        const botResponseSpan = botMessageElement.querySelector('.bot-response');
-        const response = await fetch("https://localhost:3000/stream", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: question }),
-        });
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let currentResponse = "";
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const events = chunk.split(/(\n\n)/);
-
-          events.forEach(event => {
-            if (event.startsWith('data: ')) {
-              const text = event.replace('data: ', '').trim();
-              if (text !== '[END]') {
-                currentResponse += text;
-                botResponseSpan.innerHTML = marked.parse(currentResponse);
-              }
-            }
-          });
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        outputDiv.innerHTML += `<p class="bot-message"><em>Error: ${error.message}</em></p>`;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      imageElement.src = e.target.result;
+      
+      // Find the last bot message and append after it
+      const botMessages = outputDiv.querySelectorAll('.bot-message');
+      if (botMessages.length > 0) {
+        const lastBotMessage = botMessages[botMessages.length - 1];
+        lastBotMessage.insertAdjacentElement('afterend', imageElement);
+      } else {
+        // Fallback if no bot messages exist
+        outputDiv.appendChild(imageElement);
       }
+    };
+    reader.readAsDataURL(imageFile);
+  }
+});
+
+async function askQuestion() {
+  const question = document.getElementById("question").value;
+  const imageInput = document.getElementById("image");
+  if (!question.trim() && !imageInput.files.length) return;
+
+  // Add user message
+  outputDiv.innerHTML += `<p class="user-message"><strong>You:</strong> ${question}</p>`;
+  document.getElementById("question").value = '';
+
+  try {
+    const botMessageElement = document.createElement('p');
+    botMessageElement.className = 'bot-message';
+    botMessageElement.innerHTML = `<strong>Bot:</strong> <span class="bot-response"></span>`;
+    outputDiv.appendChild(botMessageElement);
+
+    const botResponseSpan = botMessageElement.querySelector('.bot-response');
+
+    // Prepare FormData for sending text and image
+    const formData = new FormData();
+    formData.append("message", question);
+    if (imageInput.files.length > 0) {
+      formData.append("images", imageInput.files[0]);
     }
 
-    // 엔터 키로 메시지 전송 지원
-    document.getElementById("question").addEventListener("keypress", function(event) {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        askQuestion();
-      }
+    const response = await fetch("https://localhost:3000/stream", {
+      method: "POST",
+      body: formData,
     });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let currentResponse = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const events = chunk.split(/(\n\n)/);
+
+      events.forEach(event => {
+        if (event.startsWith('data: ')) {
+          const text = event.replace('data: ', '');
+          if (text !== '[END]') {
+            currentResponse += text;
+            botResponseSpan.innerHTML = marked.parse(currentResponse);
+          }
+        }
+      });
+    }
+
+    // Reset file input after processing
+    imageInput.value = '';
+  } catch (error) {
+    console.error("Error:", error);
+    outputDiv.innerHTML += `<p class="bot-message"><em>Error: ${error.message}</em></p>`;
+  }
+}
+
+// Support submitting with Enter key
+document.getElementById("question").addEventListener("keypress", function(event) {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    askQuestion();
+  }
+});
   </script>
 </body>
 </html>
