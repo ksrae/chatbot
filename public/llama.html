@@ -222,17 +222,20 @@
   
         while (!done) {
           const { value, done: streamDone } = await reader.read();
+          
           const text = decoder.decode(value, { stream: true });
-
-          if (text) {
-            const parsingText = JSON.parse(text);
-            accumulatedText += parsingText.content; // 받은 텍스트를 계속 누적
+          console.log({text});
+          if (text !== '[END]') {
+            // const parsingText = JSON.parse(text);
+            accumulatedText += text; // parsingText.content; // 받은 텍스트를 계속 누적
             botMessage.textContent = accumulatedText; // 누적된 텍스트를 표시
             chatOutput.scrollTop = chatOutput.scrollHeight; // 스크롤을 맨 아래로
 
-            done = parsingText.done;
+            // done = parsingText.done;
             
-          } 
+          } else {
+            done = true;
+          }
 
           // done = streamDone;
         }

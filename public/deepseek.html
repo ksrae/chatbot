@@ -285,33 +285,35 @@
       while (!done) {
         const { value, done: streamDone } = await reader.read();
         const text = decoder.decode(value, { stream: true });
+        // console.log({text});
 
-        if (text) {
-          const parsingText = JSON.parse(text);
+        if (text !== '[END]') {
+          // const parsingText = JSON.parse(text);
 
-          if (parsingText.content.includes('</think>')) {
+          if (text.includes('</think>')) {
             // End of thinking phase
             isThinkingPhase = false;
             botThoughtBlock.classList.add('collapsed');
             botThoughtHeader.querySelector('.thought-toggle').textContent = '▶';
             botResponseBlock.textContent = '';
-          } else if (parsingText.content.includes('<think>')) {
+          } else if (text.includes('<think>')) {
             // Thinking phase
-            const thinkMatch = parsingText.content.match(/<think>(.*?)<\/think>/s);
+            const thinkMatch = text.match(/<think>(.*?)<\/think>/s);
             if (thinkMatch) {
               botThoughtContent.textContent = thinkMatch[1].trim();
             }
           } else if (isThinkingPhase) {
             // Continue thinking phase
-            botThoughtContent.textContent += parsingText.content;
+            botThoughtContent.textContent += text;
           } else {
             // Response phase
-            botResponseBlock.textContent += parsingText.content;
+            botResponseBlock.textContent += text;
           }
 
           chatOutput.scrollTop = chatOutput.scrollHeight;
-          done = parsingText.done;
-        } 
+        } else {
+          done = true;
+        }
       }
     } catch (error) {
       if (error.name === 'AbortError') {

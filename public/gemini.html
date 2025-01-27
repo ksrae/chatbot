@@ -126,7 +126,7 @@ async function askQuestion() {
       formData.append("images", imageInput.files[0]);
     }
 
-    const response = await fetch("https://localhost:3000/stream", {
+    const response = await fetch("https://localhost:3000/process", {
       method: "POST",
       body: formData,
     });
@@ -134,23 +134,29 @@ async function askQuestion() {
     const reader = response.body.getReader();
     const decoder = new TextDecoder("utf-8");
     let currentResponse = "";
+    let isDone = false;
 
-    while (true) {
+    while (!isDone) {
       const { value, done } = await reader.read();
-      if (done) break;
 
       const chunk = decoder.decode(value);
-      const events = chunk.split(/(\n\n)/);
 
-      events.forEach(event => {
-        if (event.startsWith('data: ')) {
-          const text = event.replace('data: ', '');
-          if (text !== '[END]') {
-            currentResponse += text;
-            botResponseSpan.innerHTML = marked.parse(currentResponse);
-          }
-        }
-      });
+      if(chunk !== '[END]') {
+        const events = chunk.split(/(\n\n)/);
+        
+        // console.log({chunk})
+        events.forEach(event => {
+          // if (event.startsWith('data: ')) {
+            // const text = event.replace('data: ', '');
+            // if (text !== '[END]') {
+              currentResponse += chunk;
+              botResponseSpan.innerHTML = marked.parse(currentResponse);
+            // }
+          // }
+        });
+      } else {
+        isDone = true;
+      }
     }
 
     // Reset file input after processing
